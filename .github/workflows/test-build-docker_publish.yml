@@ -2,9 +2,9 @@ name: Build and Publish Docker Image
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
   release:
     types: [ published ]
   workflow_dispatch:
@@ -67,14 +67,14 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/hextris
+          images: ${{ secrets.DOCKER_USERNAME }}/hextris
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
             type=sha,prefix=,suffix=
@@ -132,11 +132,11 @@ jobs:
         run: |
           curl -X PATCH \
             -H "Content-Type: application/json" \
-            -H "Authorization: JWT ${{ secrets.DOCKERHUB_TOKEN }}" \
+            -H "Authorization: JWT ${{ secrets.DOCKER_PASSWORD }}" \
             -d '{
-              "full_description": "# Hextris Docker Image\n\nA Dockerized version of the popular Hextris game - a hexagonal puzzle game inspired by Tetris.\n\n## Features\n- Hexagonal gameplay\n- Fast-paced puzzle action\n- Responsive design\n- Easy to deploy\n\n## Quick Start\n\n```bash\ndocker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/hextris:latest\n```\n\nThen open http://localhost:8080 in your browser.\n\n## GitHub Repository\nhttps://github.com/zakari007/hextris\n\n## Original Project\nhttps://github.com/Hextris/hextris"
+              "full_description": "# Hextris Docker Image\n\nA Dockerized version of the popular Hextris game - a hexagonal puzzle game inspired by Tetris.\n\n## Features\n- Hexagonal gameplay\n- Fast-paced puzzle action\n- Responsive design\n- Easy to deploy\n\n## Quick Start\n\n```bash\ndocker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/hextris:latest\n```\n\nThen open http://localhost:8080 in your browser.\n\n## GitHub Repository\nhttps://github.com/zakari007/hextris\n\n## Original Project\nhttps://github.com/Hextris/hextris"
             }' \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/hextris/"
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/hextris/"
 
       - name: Send success notification
         if: success()
