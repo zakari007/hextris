@@ -60,7 +60,7 @@ jobs:
             echo "Hextris test failed: title is not 'Hextris'"
             exit 1
           else
-            echo "Hextris test passed: title is 'Hextris'"
+            echo "Hextris test passed:"
             exit 0
           fi
 
