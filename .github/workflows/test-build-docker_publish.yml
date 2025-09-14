@@ -54,9 +54,7 @@ jobs:
 
 
 
-      - name: Stop container
-        if: always()
-        run: docker rm -f hextris
+ 
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
