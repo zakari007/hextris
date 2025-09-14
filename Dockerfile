@@ -1,18 +1,21 @@
-# Dockerfile - with nginx
-FROM nginx:stable-alpine
+FROM node:18-alpine
 
-LABEL org.opencontainers.image.source="https://github.com/zakari007/hextris/"
+WORKDIR /app
 
-# Set working dir where nginx serves files
-WORKDIR /usr/share/nginx/html
+# Copy package files first for better caching
+COPY package*.json ./
+RUN npm install
 
-# Remove default nginx content (optional), then copy project files
-RUN rm -rf ./*
+# Copy application files
+COPY . .
 
-# Copy only the files needed for the site (faster) — adjust if you add build output.
-COPY . /usr/share/nginx/html
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S hextris -u 1001 && \
+    chown -R hextris:nodejs /app
 
-EXPOSE 80
+USER hextris
 
-# Run nginx in foreground
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 8080
+
+CMD ["npm", "start"]

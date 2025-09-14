@@ -1,8 +1,11 @@
-.git
-.github
 node_modules
+npm-debug.log
+.git
+.gitignore
 Dockerfile
 .dockerignore
 README.md
-LICENSE.md
+.github
+.git
 *.md
+LICENSE
