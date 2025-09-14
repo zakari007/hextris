@@ -46,14 +46,6 @@ jobs:
           file: ./Dockerfile
           load: true
           tags: test-hextris:latest
-
-      - name: Run container
-        run: |
-          docker run -d --name hextris -p 8080:80 test-hextris:latest
-          sleep 5
-
-
-
  
 
       - name: Build and push Docker image
