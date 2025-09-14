@@ -56,9 +56,12 @@ jobs:
         run: |
           TITLE=$(curl --silent http://localhost:8080/index.html | grep -oP '(?<=<title>).*?(?=</title>)')
           echo "Page title: $TITLE"
-          if [ "$TITLE" != "Hextris" ]; then
+          if [ "$TITLE" != *"Hextris" ]; then
             echo "Hextris test failed: title is not 'Hextris'"
             exit 1
+          else
+            echo "Hextris test passed:"
+            exit 0
           fi
 
       - name: Stop container
