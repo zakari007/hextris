@@ -2,8 +2,9 @@ name: Build and Publish Docker Image
 
 on:
   push:
-    branches:  main
-
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   release:
     types: [ published ]
   workflow_dispatch:
@@ -66,37 +67,19 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/hextris
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/hextris
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
             type=sha,prefix=,suffix=
             type=ref,event=branch
             type=ref,event=tag
-            type=semver,pattern={{version}}
-
-      - name: Build image (load for testing)
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          load: true
-          tags: test-hextris:latest
-
-      - name: Run container
-        run: |
-          docker run -d --name hextris -p 8080:80 test-hextris:latest
-          sleep 5
-
-
-
- 
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -105,3 +88,63 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test the built image
+        run: |
+          # Test the image we just built
+          docker run -d -p 8080:8080 --name hextris-test ${{ steps.meta.outputs.tags }}
+          sleep 15
+          
+          echo "Testing Hextris container..."
+          
+          # Test HTTP status
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || echo "000")
+          echo "HTTP Status: $HTTP_STATUS"
+          
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ HTTP test failed: Status $HTTP_STATUS"
+            echo "Container logs:"
+            docker logs hextris-test
+            exit 1
+          fi
+          
+          # Test title contains Hextris
+          TITLE=$(curl -s http://localhost:8080/ | grep -i '<title>' | head -1 | sed 's/.*<title>\(.*\)<\/title>.*/\1/' || echo "")
+          echo "Page title: '$TITLE'"
+          
+          if [[ "$TITLE" != *"Hextris"* ]] && [[ "$TITLE" != *"Hex"* ]]; then
+            echo "❌ Title test failed: Does not contain 'Hextris' or 'Hex'"
+            echo "Container logs:"
+            docker logs hextris-test
+            exit 1
+          fi
+          
+          echo "✅ All tests passed! Hextris is running correctly."
+          
+          # Cleanup
+          docker stop hextris-test
+          docker rm hextris-test
+
+      - name: Update Docker Hub description
+        if: github.event_name == 'release'
+        run: |
+          curl -X PATCH \
+            -H "Content-Type: application/json" \
+            -H "Authorization: JWT ${{ secrets.DOCKERHUB_TOKEN }}" \
+            -d '{
+              "full_description": "# Hextris Docker Image\n\nA Dockerized version of the popular Hextris game - a hexagonal puzzle game inspired by Tetris.\n\n## Features\n- Hexagonal gameplay\n- Fast-paced puzzle action\n- Responsive design\n- Easy to deploy\n\n## Quick Start\n\n```bash\ndocker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/hextris:latest\n```\n\nThen open http://localhost:8080 in your browser.\n\n## GitHub Repository\nhttps://github.com/zakari007/hextris\n\n## Original Project\nhttps://github.com/Hextris/hextris"
+            }' \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/hextris/"
+
+      - name: Send success notification
+        if: success()
+        run: |
+          echo "✅ Docker image successfully built and pushed to Docker Hub!"
+          echo "Image tags: ${{ steps.meta.outputs.tags }}"
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          echo "❌ Docker build failed! Check the logs for details."
