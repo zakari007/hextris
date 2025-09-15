@@ -144,7 +144,23 @@ jobs:
           echo "✅ Docker image successfully built and pushed to Docker Hub!"
           echo "Image tags: ${{ steps.meta.outputs.tags }}"
 
+      - name: Set up SSH agent 
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+      - name: SSH To EC2 and Deploy
+        run: |
+         ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+           docker pull ${{ secrets.DOCKER_USERNAME }}/hextris:latest
+           docker stop hextris || true
+           docker rm hextris || true
+           docker run -d -p 80:8080 --name hextris ${{ secrets.DOCKER_USERNAME }}/hextris:latest
+         EOF
+
       - name: Send failure notification
         if: failure()
         run: |
           echo "❌ Docker build failed! Check the logs for details."
+
+
+
