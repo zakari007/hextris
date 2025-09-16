@@ -263,6 +263,109 @@ rm -rf .terraform*
 rm -rf terraform.tfstate*
 ```
 
+## CI/CD pipeline
+<img width="693" height="831" alt="Image" src="https://github.com/user-attachments/assets/f07bbe43-4bf5-4420-aebd-eb9ca194af80" />
+
+CI CD with Github Actions
+
+This section explains the Build and Publish Docker Image GitHub Actions. The workflow builds, tests, and publishes a Docker image for the Hextris project, and deploys it to an EC2 host.
+Workflow file location: .github/workflows/test-build-docker_publish.yml
+
+## Overview
+
+This workflow runs on the following events:
+
+`push`  to branches: main (or other branches if you update the triggers)
+
+`pull_request` targeting main 
+
+`release` when a release is published
+
+workflow_dispatch for manual runs
+
+The workflow defines two jobs:
+
+1. `docker-build-test` — runs only for pull requests. Builds the image locally for the PR and runs lightweight runtime tests to ensure the container starts.
+
+2. `docker-build-push`  — runs for pushes, releases. Builds the image, tags it, pushes to Docker Hub, runs runtime tests against the just-built image, updates the Docker Hub description on release, and deploys to an EC2 host via SSH.
+
+## Environment variables
+
+At the top of the workflow the following env variables are set for convenience:
+
+`REGISTRY`: `docker.io`— the Docker registry host (Docker Hub by default).
+
+`IMAGE_NAME`: `zakari007/hextris` — the image name used for tagging/pushing.
+
+## Job: docker-build-test
+
+Checkout repository — actions/checkout@v4 clones the repository so the build context is available.
+
+Set up Docker Buildx — docker/setup-buildx-action@v3 configures Docker Buildx (multi-arch/build enhancements) inside the runner.
+
+Build Docker image — docker/build-push-action@v5 builds the image using the repository root as the context and uses load: true to load the built image into the runner's local Docker daemon. The image is tagged as hextris:pr-${{ github.event.number }} so each PR has a distinct tag.
+
+Test Docker image — runs a shell script which:
+
+Starts the container detached: docker run -d --name hextris-test hextris:pr-${{ github.event.number }}
+
+Waits a short time for the process to start
+
+Checks docker ps for the container (ensures it is running)
+
+If not running, prints container logs and fails the job
+
+Stops and removes the test container to keep the environment clean
+
+
+## Job: docker-build-push (build, push, test, deploy)
+
+Run condition: if: github.event_name != 'pull_request' — runs for pushes, releases, and manual triggers.
+
+Permissions:
+
+contents: read — allows the workflow to read repository contents.
+
+packages: write — permits publishing package artifacts if needed.
+
+Checkout repository — clones the repo so build context is available.
+
+Set up Docker Buildx — configures Buildx for building and pushing images.
+
+Log in to Docker Hub — docker/login-action@v3 logs into Docker Hub using DOCKER_USERNAME and DOCKER_PASSWORD secrets.
+
+Extract metadata for Docker — docker/metadata-action@v5 (id: meta) is used to generate image names, tags, and labels automatically. The images: input uses ${{ secrets.DOCKER_USERNAME }}/hextris and tags: are configured to produce several tag
+
+Build and push Docker image — docker/build-push-action@v5 builds the image and (conditionally) pushes it to Docker Hub. Inputs:
+
+context: . — build context
+
+push: ${{ github.event_name != 'pull_request' }} — pushes only when not a pull request
+
+tags: ${{ steps.meta.outputs.tags }} — tags coming from the metadata action
+
+labels: ${{ steps.meta.outputs.labels }} — labels added from metadata
+
+cache-from / cache-to: use GitHub Actions cache to speed up subsequent builds
+
+## Test the built image
+
+    Runs the image detached and maps 8080:8080
+    
+    Waits for the container to initialize
+    
+    Checks HTTP status (expects 200)
+    
+    Scrapes <title> from the web page and verifies it contains Hextris or Hex
+    
+    Prints logs and fails the job if checks fail
+    
+    Cleans up the test container
+
+
+
+
+
 
 
 
