@@ -363,39 +363,53 @@ cache-from / cache-to: use GitHub Actions cache to speed up subsequent builds
     Cleans up the test container
 
 
+## Deployment
+Before running the GitHub actions:
 
+1. Create the AWS Infrastructure: Access to AWS Infrastructure folder and run:
+   ```
+   # Terraform Initialize
+    terraform init
 
+    # Terraform Validate
+    terraform validate
 
+    # Terraform Plan
+    terraform plan
 
+    # Terraform Apply
+    terraform apply -auto-approve
+   ```
+   
+3. Install all requirements in the cluster:
+      Install Docker
+      Install kubctl
+   ```
+   curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+   ```
+4. run GitHub Action
+5. Copy kubernets-namifests folder to your cluster, then run the following command:
 
-
-
-
-
-
-
+   ```
+   kubectl apply -f kubernets-namifests/namespace.yaml
+   kubectl apply -f kubernets-namifests/configmap.yaml
+   kubectl apply -f kubernets-namifests/deployment.yaml
+   kubectl apply -f kubernets-namifests/service.yaml
+   kubectl apply -f kubernets-namifests/ingress.yaml
+    ```
+6. Verify deployment
 ```
-git clone https://github.com/your-username/hextris.git
-cd hextris
+   kubectl rollout status deployment/hextris -n --timeout=300s
+   kubectl get all -n 
 ```
+7. Test Application
+```
+ https://hextris.work.gd
+```
+## NOTE
 
-Hextris was created by a group of high school friends in 2014.
+I chose to manage the AWS infrastructure and Kubernetes manually instead of integrating them into GitHub Actions. However, I’m currently facing some challenges and will need additional time to resolve them
 
-## Press kit
-http://hextris.github.io/presskit/info.html
 
-## License
-Copyright (C) 2018 Logan Engstrom
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
