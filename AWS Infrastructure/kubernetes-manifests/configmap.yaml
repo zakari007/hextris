@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hextris-config
+  namespace: hextris
+data:
+  APP_NAME: "Hextris"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "https://hextris.work.gd"
+  GAME_TITLE: "Hextris - Hexagonal Puzzle Game"
